@@ -4,29 +4,36 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#ffffff">
-<title>Sugutas Prototype</title>
+<title>Sugutas</title>
 <style>
   *{box-sizing:border-box}
   body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",sans-serif;background:#f7f7f8;color:#171717}
   .app{max-width:430px;margin:auto;min-height:100vh;background:#fff;display:flex;flex-direction:column}
   header{padding:18px 18px 12px;font-weight:800;font-size:24px}
-  main{flex:1;padding:0 16px 90px;overflow:auto}
-  .add{width:100%;border:0;border-radius:16px;background:#111;color:#fff;padding:16px;font-size:17px;font-weight:700;margin-bottom:18px}
-  .today{background:#fff8e8;border-radius:18px;padding:16px;margin-bottom:18px}
-  .today h2{margin:0 0 12px;font-size:19px}
-  .task{display:flex;align-items:flex-start;gap:10px;padding:12px 0;border-bottom:1px solid #eee;font-size:16px;line-height:1.4}
+  main{flex:1;padding:0 14px 84px;overflow:auto}
+  .add{width:100%;border:0;border-radius:16px;background:#111;color:#fff;padding:15px;font-size:17px;font-weight:700;margin-bottom:12px}
+  .today{background:#fff8e8;border-radius:18px;padding:13px;margin-bottom:10px}
+  .today h2{margin:0 0 7px;font-size:19px}
+  .task{display:flex;align-items:center;gap:9px;padding:9px 0;border-bottom:1px solid #eee;font-size:15px;line-height:1.35}
   .task:last-child{border-bottom:0}
-  .task input{width:21px;height:21px;margin-top:1px;accent-color:#111}
-  .groups{display:grid;gap:10px}
-  .group{border:1px solid #e8e8e8;border-radius:16px;overflow:hidden}
-  .group button{width:100%;background:#fff;border:0;padding:15px;text-align:left;font-size:16px;font-weight:700;display:flex;justify-content:space-between}
+  .task input{width:21px;height:21px;accent-color:#111;flex:none}
+  .task-text{flex:1;min-width:0;overflow-wrap:anywhere}
+  .task-actions{display:flex;gap:5px;flex:none}
+  .move-btn,.undo-btn{border:1px solid #ddd;background:#fff;border-radius:8px;padding:6px 8px;font-size:12px;color:#555}
+  .move-panel{display:none;padding:7px 0 4px 30px}
+  .move-panel.open{display:block}
+  .move-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .move-grid button{border:1px solid #ddd;background:#fff;border-radius:9px;padding:8px 5px;font-size:12px}
+  .groups{display:grid;gap:7px}
+  .group{border:1px solid #e8e8e8;border-radius:13px;overflow:hidden}
+  .group button{width:100%;background:#fff;border:0;padding:12px 13px;text-align:left;font-size:15px;font-weight:700;display:flex;justify-content:space-between;align-items:center}
   .count{color:#888;font-weight:600}
-  .items{display:none;padding:0 15px 8px}
+  .items{display:none;padding:0 13px 6px}
   .group.open .items{display:block}
-  nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:min(430px,100%);height:70px;background:rgba(255,255,255,.96);backdrop-filter:blur(12px);border-top:1px solid #eee;display:grid;grid-template-columns:1fr 1fr 1fr}
+  nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:min(430px,100%);height:72px;background:rgba(255,255,255,.96);backdrop-filter:blur(12px);border-top:1px solid #eee;display:grid;grid-template-columns:1fr 1fr 1fr;z-index:20}
   nav button{border:0;background:none;font-size:12px;color:#666}
   nav button.active{color:#111;font-weight:800}
-  nav .plus{font-size:24px;color:#111}
+  nav .plus{font-size:25px;color:#111}
   .screen{display:none}
   .screen.active{display:block}
   .back{border:0;background:none;font-size:15px;padding:4px 0 16px}
@@ -40,7 +47,13 @@
   .history-total strong{display:block;font-size:46px}
   .history-total span{font-size:12px;color:#888;letter-spacing:1px}
   .date{font-weight:800;margin:20px 0 4px}
-  .empty{text-align:center;color:#999;padding:40px 10px}
+  .history-item{display:flex;align-items:center;gap:9px;padding:9px 0;border-bottom:1px solid #eee;font-size:15px}
+  .history-item .task-text{flex:1}
+  .empty{text-align:center;color:#999;padding:34px 10px}
+  .note{font-size:12px;color:#888;line-height:1.5;margin:8px 2px 18px}
+  .toast{position:fixed;left:50%;bottom:84px;transform:translateX(-50%) translateY(20px);width:min(390px,calc(100% - 28px));background:#111;color:#fff;border-radius:12px;padding:11px 12px;display:flex;justify-content:space-between;align-items:center;gap:10px;opacity:0;pointer-events:none;transition:.2s;z-index:30;font-size:13px}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
+  .toast button{border:0;background:#fff;color:#111;border-radius:8px;padding:6px 9px;font-weight:700}
 </style>
 </head>
 <body>
@@ -72,6 +85,7 @@
       <button class="choice" data-period="life">♾ 一生</button>
       <button class="choice selected" data-period="inbox">📥 とりあえず</button>
     </div>
+    <div class="note">期限を過ぎたタスクは消えずに「📥 とりあえず」へ戻ります。あとからいつでも移動できます。</div>
     <button class="submit" onclick="addTask()">追加する</button>
   </section>
 
@@ -87,54 +101,215 @@
   <button onclick="show('add')" class="plus">＋<br><small>追加</small></button>
   <button id="nav-history" onclick="show('history')">🏆<br>履歴</button>
 </nav>
+
+<div id="toast" class="toast">
+  <span id="toastText"></span>
+  <button id="toastUndo" onclick="undoLastComplete()">取り消す</button>
+</div>
 </div>
 
 <script>
 const labels = {
-  inbox:'📥 とりあえず', week:'📅 今週', month:'🗓 今月',
-  year:'📆 今年', life:'♾ 一生'
+  today:'🔥 今日', inbox:'📥 とりあえず', week:'📅 今週',
+  month:'🗓 今月', year:'📆 今年', life:'♾ 一生'
 };
+
 let tasks = JSON.parse(localStorage.getItem('sugutas_tasks') || '[]');
 let history = JSON.parse(localStorage.getItem('sugutas_history') || '[]');
 let selected = 'inbox';
+let lastCompletedId = null;
+let toastTimer = null;
 
-document.getElementById('text').addEventListener('input', e => {
-  document.getElementById('counter').textContent = e.target.value.length;
-});
-document.querySelectorAll('.choice').forEach(b => b.onclick = () => {
-  document.querySelectorAll('.choice').forEach(x=>x.classList.remove('selected'));
-  b.classList.add('selected'); selected=b.dataset.period;
-});
-
+/* 日本時間のカレンダー日付を使う。toISOString()による日付ズレを避ける。 */
+function localDate(d=new Date()){
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
 function todayKey(d=new Date()){
-  return d.toISOString().slice(0,10);
+  const x=localDate(d);
+  return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0');
 }
 function monday(d=new Date()){
-  const x=new Date(d); const day=x.getDay(); x.setDate(x.getDate()-(day===0?6:day-1)); return todayKey(x);
+  const x=localDate(d);
+  const day=x.getDay();
+  x.setDate(x.getDate()-(day===0?6:day-1));
+  return todayKey(x);
 }
-function weekKey(){return monday()}
-function monthKey(d=new Date()){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')}
-function yearKey(d=new Date()){return String(d.getFullYear())}
+function monthKey(d=new Date()){
+  const x=localDate(d);
+  return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0');
+}
+function yearKey(d=new Date()){ return String(localDate(d).getFullYear()); }
+
+function periodKey(period){
+  if(period==='today') return todayKey();
+  if(period==='week') return monday();
+  if(period==='month') return monthKey();
+  if(period==='year') return yearKey();
+  return null;
+}
+
+/* 旧プロトタイプのデータにも対応し、期限切れを自動で「とりあえず」へ戻す */
+function normalizeExpiredTasks(){
+  let changed=false;
+  tasks.forEach(t=>{
+    if(t.period==='life' || t.period==='inbox') return;
+
+    const currentKey=periodKey(t.period);
+    const savedKey=t.period==='today'?t.day:t.period==='week'?t.week:t.period==='month'?t.month:t.year;
+
+    if(savedKey && currentKey !== savedKey){
+      t.period='inbox';
+      t.day=undefined;
+      changed=true;
+    }
+  });
+  if(changed) save();
+}
+
+document.getElementById('text').addEventListener('input', e=>{
+  document.getElementById('counter').textContent=e.target.value.length;
+});
+
+document.querySelectorAll('.choice').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.choice').forEach(x=>x.classList.remove('selected'));
+  b.classList.add('selected');
+  selected=b.dataset.period;
+});
 
 function addTask(){
   const text=document.getElementById('text').value.trim();
   if(!text){alert('タスクを入力してください');return;}
-  tasks.push({id:Date.now(),text,period:selected,created:todayKey(),week:monday(),month:monthKey(),year:yearKey()});
-  save(); document.getElementById('text').value=''; document.getElementById('counter').textContent='0';
-  selected='inbox'; document.querySelectorAll('.choice').forEach(x=>x.classList.toggle('selected',x.dataset.period==='inbox'));
-  render(); show('home');
+
+  const now=new Date();
+  const task={
+    id:Date.now()+Math.random(),
+    text,
+    period:selected,
+    created:todayKey(now),
+    day:selected==='today'?todayKey(now):null,
+    week:monday(now),
+    month:monthKey(now),
+    year:yearKey(now)
+  };
+
+  tasks.push(task);
+  save();
+
+  document.getElementById('text').value='';
+  document.getElementById('counter').textContent='0';
+  selected='inbox';
+  document.querySelectorAll('.choice').forEach(x=>x.classList.toggle('selected',x.dataset.period==='inbox'));
+
+  render();
+  show('home');
 }
+
+function moveTask(id, period){
+  normalizeExpiredTasks();
+  const t=tasks.find(x=>x.id===id);
+  if(!t)return;
+
+  const now=new Date();
+  t.period=period;
+
+  if(period==='today') t.day=todayKey(now);
+  if(period==='week') t.week=monday(now);
+  if(period==='month') t.month=monthKey(now);
+  if(period==='year') t.year=yearKey(now);
+
+  save();
+  render();
+}
+
+function toggleMove(id){
+  const panel=document.getElementById('move-'+id);
+  if(panel) panel.classList.toggle('open');
+}
+
 function complete(id){
-  const i=tasks.findIndex(t=>t.id===id); if(i<0)return;
+  normalizeExpiredTasks();
+  const i=tasks.findIndex(t=>t.id===id);
+  if(i<0)return;
+
   const t=tasks.splice(i,1)[0];
-  history.unshift({text:t.text,date:todayKey()});
-  save(); render();
+  const entry={
+    id:t.id,
+    text:t.text,
+    completedAt:todayKey(),
+    originalTask:t
+  };
+
+  history.unshift(entry);
+  lastCompletedId=t.id;
+  save();
+  render();
+  showToast('「'+t.text+'」を完了しました');
 }
+
+function undoLastComplete(){
+  if(!lastCompletedId)return;
+  restoreHistoryItem(lastCompletedId);
+  hideToast();
+}
+
+function restoreHistoryItem(id){
+  const i=history.findIndex(h=>h.id===id);
+  if(i<0)return;
+
+  const h=history[i];
+  let t=h.originalTask;
+
+  if(!t){
+    t={id:h.id,text:h.text,period:'inbox',created:h.completedAt,week:monday(),month:monthKey(),year:yearKey(),day:null};
+  }
+
+  /* 元の期限がすでに切れている場合は、消さずに「とりあえず」へ戻す */
+  const p=t.period;
+  const key=p==='today'?t.day:p==='week'?t.week:p==='month'?t.month:p==='year'?t.year:null;
+  const current=periodKey(p);
+  if(p!=='life' && p!=='inbox' && key && current!==key){
+    t.period='inbox';
+    t.day=null;
+  }
+
+  tasks.push(t);
+  history.splice(i,1);
+  lastCompletedId=null;
+  save();
+  render();
+}
+
 function save(){
   localStorage.setItem('sugutas_tasks',JSON.stringify(tasks));
   localStorage.setItem('sugutas_history',JSON.stringify(history));
 }
+
+function taskHTML(t){
+  return `
+    <div>
+      <label class="task">
+        <input type="checkbox" onchange="complete(${JSON.stringify(t.id)})">
+        <span class="task-text">${escapeHtml(t.text)}</span>
+        <span class="task-actions">
+          <button class="move-btn" onclick="event.preventDefault();toggleMove(${JSON.stringify(t.id)})">移動</button>
+        </span>
+      </label>
+      <div class="move-panel" id="move-${t.id}">
+        <div class="move-grid">
+          <button onclick="moveTask(${JSON.stringify(t.id)},'today')">🔥 今日</button>
+          <button onclick="moveTask(${JSON.stringify(t.id)},'week')">📅 今週</button>
+          <button onclick="moveTask(${JSON.stringify(t.id)},'month')">🗓 今月</button>
+          <button onclick="moveTask(${JSON.stringify(t.id)},'year')">📆 今年</button>
+          <button onclick="moveTask(${JSON.stringify(t.id)},'life')">♾ 一生</button>
+          <button onclick="moveTask(${JSON.stringify(t.id)},'inbox')">📥 とりあえず</button>
+        </div>
+      </div>
+    </div>`;
+}
+
 function render(){
+  normalizeExpiredTasks();
+
   const today=document.getElementById('todayList');
   const todays=tasks.filter(t=>t.period==='today');
   today.innerHTML=todays.length?todays.map(taskHTML).join(''):'<div class="empty">今日やることはありません</div>';
@@ -142,23 +317,63 @@ function render(){
   const periods=['week','month','year','life','inbox'];
   document.getElementById('groups').innerHTML=periods.map(p=>{
     const arr=tasks.filter(t=>t.period===p);
-    return `<div class="group"><button onclick="this.parentElement.classList.toggle('open')">${labels[p]} <span class="count">${arr.length}</span></button><div class="items">${arr.length?arr.map(taskHTML).join(''):'<div class="empty">なし</div>'}</div></div>`;
+    return `
+      <div class="group">
+        <button onclick="this.parentElement.classList.toggle('open')">
+          ${labels[p]} <span class="count">${arr.length}件　›</span>
+        </button>
+        <div class="items">${arr.length?arr.map(taskHTML).join(''):'<div class="empty">なし</div>'}</div>
+      </div>`;
   }).join('');
 
   document.getElementById('total').textContent=history.length;
-  document.getElementById('historyList').innerHTML=history.length?history.map(h=>`<div class="date">${h.date}</div><div class="task">✓ <span>${escapeHtml(h.text)}<br><small style="color:#888">達成：${h.date}</small></span></div>`).join(''):'<div class="empty">まだ達成履歴はありません</div>';
+
+  if(!history.length){
+    document.getElementById('historyList').innerHTML='<div class="empty">まだ達成履歴はありません</div>';
+    return;
+  }
+
+  const grouped={};
+  history.forEach(h=>{
+    if(!grouped[h.completedAt])grouped[h.completedAt]=[];
+    grouped[h.completedAt].push(h);
+  });
+
+  document.getElementById('historyList').innerHTML=Object.keys(grouped).sort().reverse().map(date=>`
+    <div class="date">${date}</div>
+    ${grouped[date].map(h=>`
+      <div class="history-item">
+        <span>✓</span>
+        <span class="task-text">${escapeHtml(h.text)}</span>
+        <button class="undo-btn" onclick="restoreHistoryItem(${JSON.stringify(h.id)})">↩ 戻す</button>
+      </div>`).join('')}
+  `).join('');
 }
-function taskHTML(t){
-  return `<label class="task"><input type="checkbox" onchange="complete(${t.id})"><span>${escapeHtml(t.text)}</span></label>`;
-}
-function escapeHtml(s){return s.replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+
 function show(id){
+  normalizeExpiredTasks();
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   document.getElementById('nav-home').classList.toggle('active',id==='home');
   document.getElementById('nav-history').classList.toggle('active',id==='history');
   render();
 }
+
+function showToast(text){
+  document.getElementById('toastText').textContent=text;
+  document.getElementById('toast').classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(hideToast,5000);
+}
+function hideToast(){
+  document.getElementById('toast').classList.remove('show');
+  clearTimeout(toastTimer);
+}
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+normalizeExpiredTasks();
 render();
 </script>
 </body>
